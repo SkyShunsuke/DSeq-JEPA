@@ -1,0 +1,57 @@
+data:
+  root_path: ./data/ # path to the parent folder of your dataset
+  dataset_name: imagenet1k  # Change to your dataset name if needed
+  train_subset_file: null
+  test_subset_file: null
+  batch_size_per_replica: 80
+  num_workers: 8
+  pin_memory: True
+  augmentation:
+    crop_size: 224
+    img_size: 256
+    interpolation: 3
+    use_gaussian_blur: False
+    use_horizontal_flip: False
+    use_color_distortion: False
+    color_jitter_strength: 0.0
+mask:
+  mask_type: multiblock
+  patch_size: 16
+  num_enc_masks: 1
+  num_pred_masks: 4
+  aspect_ratio:
+    - 0.75
+    - 1.5
+  enc_mask_scale: 
+    - 0.85
+    - 1.0
+  pred_mask_scale:
+    - 0.15
+    - 0.20
+  min_keep: 10
+  allow_overlap: False
+  ratio:   # ONLY FOR RANDOM MASKING
+    - 0.6
+    - 0.6
+framework:
+  name: masking
+model:
+  pretrained_weights: null # YOUR PATH HERE
+  model_name: vit_base
+  patch_size: 16
+visualization:
+  num_samples: 80
+  vis_strategy: masking
+  vis_config:
+    cmap_name: tab10
+    feature_res:
+      - 14
+      - 14
+logging:
+  log_dir: logs/vis_masking_vitb_in1k/
+  verbose: True
+
+
+
+
+  

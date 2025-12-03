@@ -1,0 +1,121 @@
+data:
+  root_path: ./data/ # path to the parent folder of your dataset
+  dataset_name: imagenet1k  # Change to your dataset name if needed
+  train_subset_file: meta/in1k_subset10.0%_seed0_train.txt
+  batch_size_per_replica: 256
+  num_workers: 8
+  pin_memory: True
+  augmentation:
+    crop_size: 224
+    crop_scale: 
+      - 0.3
+      - 1.0
+    use_gaussian_blur: False
+    use_horizontal_flip: False
+    use_color_distortion: False
+    color_jitter_strength: 0.0
+mask:
+  mask_type: multiblock
+  patch_size: 16
+  num_enc_masks: 1
+  num_pred_masks: 4
+  aspect_ratio:
+    - 0.75
+    - 1.5
+  enc_mask_scale: 
+    - 0.85
+    - 1.0
+  pred_mask_scale:
+    - 0.15
+    - 0.20
+  min_keep: 10
+  allow_overlap: False
+  ratio:   # ONLY FOR RANDOM MASKING
+    - 0.6
+    - 0.6
+opt:
+  epochs: 600
+  name: adamw
+  ipe_scale: 1.0
+  clip_grad: 0.0
+  wd_start: 0.04
+  wd_end: 0.4
+  lr_start: 0.0002
+  lr_warmup: 0.0008
+  lr_warmup_epochs: 15
+  lr_end: 1.0e-04
+  fix_lr_thres: -1
+  fix_wd_thres: -1
+  fix_lr_strategy: const
+  fix_wd_strategy: const
+  all_gather: False
+  use_bfloat16: True
+  bias_decay: False
+  norm_decay: False
+  global_seed: 0
+framework:
+  name: dseqjepa
+  model:
+    name: vit_base
+    emb_dim: 768
+    pred_depth: 6
+    pred_emb_dim: 384
+    ema_start: 0.996
+    ema_end: 1.0
+    use_stop: False
+    stop_var: 0.0
+    drop_path_rate: 0.0
+    learned_pos_emb: False
+    include_mask_token: True
+    use_projector: False
+  target_depth: 1  # K: avg. of last-K blocks outputs will be used as target representation.
+  target_gradient: True
+  loss_betas: 
+    sim: 25
+    std: 25
+    cov: 1
+    vicreg: 0.001
+  use_momentum: True
+  mlp_projector:
+    hidden_dim: 3072
+    out_dim: 3072
+    num_layers: 3
+    fc_bias: False
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/pretrain_dseqjepa_vitb16_in1k/
+  log_step_freq: 100
+  use_tensorboard: True
+  use_csv: True
+  log_stdout: True
+  ckpt:
+    save_latest: True
+    ckpt_epoch_freq: 25
+    save_best: True
+  wandb: 
+    use_wandb: True
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: pretrain_dseqjepa_vitb16_in1k
+  eval:
+    eval_epoch_freq: 25
+    eval_strategy: "knn"
+    feature_strategy: 
+      - lastPOOL
+      - concatPOOL4
+    knn_k: 20
+    knn_t: 0.07
+    num_classes: 1000
+    sim_chunk_size: 4096
+  vis:
+    vis_epoch_freq: 50
+    num_samples: 16
+    vis_strategy: xx
+
+
+
+
+
+
+  

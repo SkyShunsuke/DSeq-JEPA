@@ -1,2 +1,1 @@
-# DSeq-JEPA
 The official implementation of the paper "DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture"

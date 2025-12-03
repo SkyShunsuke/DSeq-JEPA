@@ -1,0 +1,66 @@
+data:
+  root_path: ./data/ # path to the parent folder of your dataset
+  dataset_name: imagenet1k  # Change to your dataset name if needed
+  train_subset_file: null
+  test_subset_file: null
+  batch_size_per_replica: 32
+  num_workers: 8
+  pin_memory: True
+  augmentation:
+    crop_size: 224
+    img_size: 256
+    interpolation: 3
+opt:
+  epochs: 28
+  name: sgd
+  ipe_scale: 1.0
+  clip_grad: 0.0
+  weight_decay: 0.0005
+  momentum: 0.9
+  nesterov: True
+  lr: 
+    auto_lr_scaling: True
+    base_lr: 0.01
+    base_lr_batch_size: 256
+    name: multistep
+    lr_values: [0.01, 0.001, 0.0001, 0.00001]
+    milestones: [8, 16, 24]
+  use_bfloat16: False
+  bias_decay: False
+  norm_decay: False
+  global_seed: 0
+framework:
+  name: probing
+model:
+  pretrained_weights: # YOUR PATH HERE
+  model_name: vit_base
+  patch_size: 16
+  num_classes: 1000
+  head_type: linear  # linear or mlp
+  use_bn: True
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/probing_ijepa_vitb_in1k/
+  log_step_freq: 100
+  use_tensorboard: True
+  use_csv: True
+  log_stdout: True
+  ckpt:
+    save_latest: True
+    ckpt_epoch_freq: 10
+    save_best: True
+  wandb: 
+    use_wandb: True
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: linear_ijepa_vitb16_in1k
+  eval:
+    eval_epoch_freq: 1
+
+
+
+
+
+
+  

@@ -1,0 +1,43 @@
+data:
+  root_path: ./data/ # path to the parent folder of your dataset
+  dataset_name: imagenet1k  # Change to your dataset name if needed
+  train_subset_file: null
+  test_subset_file: null
+  batch_size_per_replica: 256
+  num_workers: 8
+  pin_memory: True
+  augmentation:
+    crop_size: 224
+    img_size: 256
+    interpolation: 3
+    use_gaussian_blur: False
+    use_horizontal_flip: False
+    use_color_distortion: False
+    color_jitter_strength: 0.0
+framework:
+  name: visualization
+model:
+  pretrained_weights: null # YOUR PATH HERE
+  model_name: vit_base
+  patch_size: 16
+visualization:
+  num_samples: 80
+  vis_strategy: similarity
+  vis_config:
+    layers: [3]
+    layer_agg: mean # [rollout, each, mean]
+    query_type: gap # [cls, gap]
+    sim_metric: cosine # [cosine, l2]
+    feature_res:
+      - 14
+      - 14
+    cmap: inferno
+    inverse_score: True
+logging:
+  log_dir: logs/vis_ijepa_vitb_in1k/
+  verbose: True
+
+
+
+
+  
