@@ -546,6 +546,7 @@ def main(params, args):
             lr_scheduler.step()
             wd_scheduler.step()
             ema_scheduler.step()
+            lambda_scheduler.step()
             
         # -- evaluate
         if epoch % eval_freq == 0:

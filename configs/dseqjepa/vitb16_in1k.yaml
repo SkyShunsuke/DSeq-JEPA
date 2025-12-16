@@ -81,6 +81,9 @@ framework:
     out_dim: 3072
     num_layers: 3
     fc_bias: False
+  lambda:
+    lambda_start: 0.0
+    lambda_end: 1.0
 resume:
   resume_path: null
 logging:
