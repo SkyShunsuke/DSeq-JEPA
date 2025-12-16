@@ -5,8 +5,8 @@ from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 
 from src.models import init_target_encoder
-from src.utils.dist import init_distributed_mode, get_rank, get_world_size
-from src.utils.dist import is_main_process as is_main
+from src.utils.distributed import init_distributed_mode, get_rank, get_world_size
+from src.utils.distributed import is_main_process as is_main
 from src.utils.log import setup_logging, get_logger
 from src.dataset import make_probing_transforms, make_dataset
 from src.utils.opt.optimzer import load_jepa_target_encoder_weights

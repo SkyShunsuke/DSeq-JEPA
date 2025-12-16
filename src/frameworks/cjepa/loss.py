@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from src.utils.dist import concat_all_gather_with_grad
+from src.utils.distributed import concat_all_gather_with_grad
     
 def variance_loss(z, eps: float = 1e-4):
     std = torch.sqrt(z.var(dim=0) + eps)

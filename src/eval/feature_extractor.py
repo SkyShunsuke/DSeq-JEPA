@@ -3,9 +3,9 @@ import torch
 import torch.distributed as dist
 from torch.nn.functional import normalize as F_normalize
 
-from src.utils.dist import init_distributed_mode, get_rank, get_world_size, \
+from src.utils.distributed import init_distributed_mode, get_rank, get_world_size, \
     concat_all_gather, sum_all_reduce
-from src.utils.dist import is_main_process as is_main
+from src.utils.distributed import is_main_process as is_main
 from src.models.vision_transformer import VisionTransformer
 from src.utils.log import get_logger
 
