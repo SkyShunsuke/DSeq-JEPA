@@ -4,7 +4,7 @@
 GPU_NUM=8  # REPLACE with the number of GPUs you want to use
 ADDR=localhost # REPLACE with the master node address if using multiple nodes
 PORT=12345  # REPLACE with an available port number
-CONFIG_FILE=./configs/dseqjepa/vitt16_in1k.yaml  # REPLACE with your config file path
+CONFIG_FILE=./configs/dseqjepa/vitb16_in1k.yaml  # REPLACE with your config file path
 
 torchrun \
     --nnodes=1 \

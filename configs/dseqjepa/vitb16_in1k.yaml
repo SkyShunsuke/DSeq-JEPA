@@ -1,5 +1,5 @@
 data:
-  root_path: ./data/ # path to the parent folder of your dataset
+  root_path: /home/acg17237wy/projects/ijepa/data # path to the parent folder of your dataset
   dataset_name: imagenet1k  # Change to your dataset name if needed
   train_subset_file: meta/in1k_subset10.0%_seed0_train.txt
   batch_size_per_replica: 256
@@ -57,9 +57,9 @@ framework:
   name: dseqjepa
   model:
     name: vit_base
-    emb_dim: 768
+    emb_dim: 192
     pred_depth: 6
-    pred_emb_dim: 384
+    pred_emb_dim: 192
     ema_start: 0.996
     ema_end: 1.0
     use_stop: False
@@ -68,6 +68,7 @@ framework:
     learned_pos_emb: False
     include_mask_token: True
     use_projector: False
+    use_class_token: True
   target_depth: 1  # K: avg. of last-K blocks outputs will be used as target representation.
   target_gradient: True
   loss_betas: 
@@ -81,6 +82,12 @@ framework:
     out_dim: 3072
     num_layers: 3
     fc_bias: False
+  attention: 
+    depth: 10
+    strategy: similarity
+    alpha: 0.15
+    pool_window_size: 3
+    region_num: 5
   lambda:
     lambda_start: 0.0
     lambda_end: 1.0

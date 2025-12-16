@@ -1,0 +1,156 @@
+_wandb:
+    value:
+        cli_version: 0.19.6
+        m: []
+        python_version: 3.10.13
+        t:
+            "1":
+                - 1
+                - 41
+                - 55
+            "2":
+                - 1
+                - 41
+                - 55
+            "3":
+                - 13
+                - 16
+                - 23
+                - 55
+                - 61
+            "4": 3.10.13
+            "5": 0.19.6
+            "8":
+                - 5
+            "12": 0.19.6
+            "13": linux-x86_64
+data:
+    value:
+        augmentation:
+            color_jitter_strength: 0
+            crop_scale:
+                - 0.3
+                - 1
+            crop_size: 224
+            use_color_distortion: false
+            use_gaussian_blur: false
+            use_horizontal_flip: false
+        batch_size_per_replica: 256
+        dataset_name: imagenet1k
+        num_workers: 8
+        pin_memory: true
+        root_path: /home/acg17237wy/projects/ijepa/data
+        train_subset_file: meta/in1k_subset10.0%_seed0_train.txt
+framework:
+    value:
+        attention:
+            alpha: 0.15
+            depth: 10
+            pool_window_size: 3
+            region_num: 5
+            strategy: similarity
+        lambda:
+            lambda_end: 1
+            lambda_start: 0
+        loss_betas:
+            cov: 1
+            sim: 25
+            std: 25
+            vicreg: 0.001
+        mlp_projector:
+            fc_bias: false
+            hidden_dim: 3072
+            num_layers: 3
+            out_dim: 3072
+        model:
+            drop_path_rate: 0
+            ema_end: 1
+            ema_start: 0.996
+            emb_dim: 192
+            include_mask_token: true
+            learned_pos_emb: false
+            name: vit_base
+            pred_depth: 6
+            pred_emb_dim: 192
+            stop_var: 0
+            use_class_token: true
+            use_projector: false
+            use_stop: false
+        name: dseqjepa
+        target_depth: 1
+        target_gradient: true
+        use_momentum: true
+logging:
+    value:
+        ckpt:
+            ckpt_epoch_freq: 25
+            save_best: true
+            save_latest: true
+        eval:
+            eval_epoch_freq: 25
+            eval_strategy: knn
+            feature_strategy:
+                - lastPOOL
+                - concatPOOL4
+            knn_k: 20
+            knn_t: 0.07
+            num_classes: 1000
+            sim_chunk_size: 4096
+        log_dir: logs/pretrain_dseqjepa_vitb16_in1k/
+        log_stdout: true
+        log_step_freq: 100
+        use_csv: true
+        use_tensorboard: true
+        vis:
+            num_samples: 16
+            vis_epoch_freq: 50
+            vis_strategy: xx
+        wandb:
+            entity: shuns71
+            project_name: FG-JEPA
+            run_name: pretrain_dseqjepa_vitb16_in1k
+            use_wandb: true
+mask:
+    value:
+        allow_overlap: false
+        aspect_ratio:
+            - 0.75
+            - 1.5
+        enc_mask_scale:
+            - 0.85
+            - 1
+        mask_type: multiblock
+        min_keep: 10
+        num_enc_masks: 1
+        num_pred_masks: 4
+        patch_size: 16
+        pred_mask_scale:
+            - 0.15
+            - 0.2
+        ratio:
+            - 0.6
+            - 0.6
+opt:
+    value:
+        all_gather: false
+        bias_decay: false
+        clip_grad: 0
+        epochs: 600
+        fix_lr_strategy: const
+        fix_lr_thres: -1
+        fix_wd_strategy: const
+        fix_wd_thres: -1
+        global_seed: 0
+        ipe_scale: 1
+        lr_end: 0.0001
+        lr_start: 0.0002
+        lr_warmup: 0.0008
+        lr_warmup_epochs: 15
+        name: adamw
+        norm_decay: false
+        use_bfloat16: true
+        wd_end: 0.4
+        wd_start: 0.04
+resume:
+    value:
+        resume_path: null
