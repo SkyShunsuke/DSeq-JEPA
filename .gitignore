@@ -24,7 +24,9 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 logs/
+wandb/
 *.egg
+wandb/
 MANIFEST
 
 # PyInstaller
