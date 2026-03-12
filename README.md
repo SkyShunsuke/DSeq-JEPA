@@ -4,7 +4,7 @@
 [![AlphaArXiv](https://img.shields.io/badge/AlphaArXiv-2504.05662-b31b1b.svg)](https://www.alphaxiv.org/abs/2511.17354)
 
 <p align="center">
-  <img src="demo/method.png" width="720">
+  <img src="demo/motivation.pdf" width="720">
 </p>
 
 This is a official PyTorch implementation of the paper [DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture](https://arxiv.org/abs/2511.17354):
