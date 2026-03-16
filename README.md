@@ -1,7 +1,7 @@
 # DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture <br><sub>Official PyTorch Implementation</sub>
 
 [![arXiv](https://img.shields.io/badge/arXiv%20paper-2406.11838-b31b1b.svg)](https://arxiv.org/abs/2511.17354)&nbsp;
-[![AlphaArXiv](https://img.shields.io/badge/AlphaArXiv-2504.05662-b31b1b.svg)](https://www.alphaxiv.org/abs/2511.17354)
+
 
 <p align="center">
   <img src="demo/motivation.png" width="720">
