@@ -1,10 +1,10 @@
 # DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture <br><sub>Official PyTorch Implementation</sub>
 
 [![arXiv](https://img.shields.io/badge/arXiv%20paper-2406.11838-b31b1b.svg)](https://arxiv.org/abs/2511.17354)&nbsp;
-[![AlphaArXiv](https://img.shields.io/badge/AlphaArXiv-2504.05662-b31b1b.svg)](https://www.alphaxiv.org/abs/2511.17354)
+
 
 <p align="center">
-  <img src="demo/method.png" width="720">
+  <img src="demo/motivation.png" width="720">
 </p>
 
 This is a official PyTorch implementation of the paper [DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture](https://arxiv.org/abs/2511.17354):
@@ -12,7 +12,7 @@ This is a official PyTorch implementation of the paper [DSeq-JEPA: Discriminativ
 ```
 @article{he2025dseqjepa,
       title={DSeq-JEPA: Discriminative Sequential Joint-Embedding Predictive Architecture}, 
-      author={Xiangteng He and Shunsuke Sakai and Kun Yuan and Nicolas Padoy and Tatsuhito Hasegawa and Leonid Sigal},
+      author={Xiangteng He and Shunsuke Sakai and Shivam Chandhok and Sara Beery and Kun Yuan and Nicolas Padoy and Tatsuhito Hasegawa and Leonid Sigal},
       year={2025},
       url={https://arxiv.org/abs/2511.17354}, 
 }
