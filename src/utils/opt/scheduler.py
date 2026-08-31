@@ -510,3 +510,94 @@ class CosineWDSchedule(object):
         for k, v in state_dict.items():
             if hasattr(self, k):
                 setattr(self, k, v)
+
+
+def get_poly_lr_scheduler(
+    optimizer: torch.optim.Optimizer,
+    base_lr: float,
+    total_steps: int,
+    warmup_steps: int = 0,
+    warmup_ratio: float = 1e-6,
+    power: float = 1.0,
+    min_lr: float = 0.,
+) -> 'PolyLRSchedule':
+    """
+    Returns a PolyLRSchedule (the standard semantic-segmentation schedule).
+    """
+    return PolyLRSchedule(
+        optimizer=optimizer,
+        base_lr=base_lr,
+        total_steps=total_steps,
+        warmup_steps=warmup_steps,
+        warmup_ratio=warmup_ratio,
+        power=power,
+        min_lr=min_lr,
+    )
+
+
+class PolyLRSchedule(object):
+    """Linear warmup followed by polynomial decay, stepped once per iteration.
+
+    lr(t) = base_lr * (1 - (t - warmup) / (total - warmup)) ** power
+
+    Per-group learning rates are scaled by each group's `lr_scale` (used to give
+    the decoder a larger learning rate than the pre-trained encoder).
+    """
+
+    def __init__(
+        self,
+        optimizer,
+        base_lr,
+        total_steps,
+        warmup_steps=0,
+        warmup_ratio=1e-6,
+        power=1.0,
+        min_lr=0.,
+    ):
+        self.optimizer = optimizer
+        self.base_lr = base_lr
+        self.total_steps = total_steps
+        self.warmup_steps = warmup_steps
+        self.warmup_ratio = warmup_ratio
+        self.power = power
+        self.min_lr = min_lr
+        self._step = 0
+        self._apply(self._compute_lr(0))
+
+    def _compute_lr(self, step):
+        if self.warmup_steps > 0 and step < self.warmup_steps:
+            alpha = step / float(max(1, self.warmup_steps))
+            return self.base_lr * (self.warmup_ratio + (1. - self.warmup_ratio) * alpha)
+        progress = (step - self.warmup_steps) / float(max(1, self.total_steps - self.warmup_steps))
+        progress = min(max(progress, 0.), 1.)
+        return self.min_lr + (self.base_lr - self.min_lr) * ((1. - progress) ** self.power)
+
+    def _apply(self, lr):
+        for group in self.optimizer.param_groups:
+            group['lr'] = lr * group.get('lr_scale', 1.0)
+        return lr
+
+    def step(self):
+        self._step += 1
+        return self._apply(self._compute_lr(self._step))
+
+    def get_current_lr(self):
+        for group in self.optimizer.param_groups:
+            return group['lr']
+
+    def state_dict(self):
+        return {
+            'base_lr': self.base_lr,
+            'total_steps': self.total_steps,
+            'warmup_steps': self.warmup_steps,
+            'warmup_ratio': self.warmup_ratio,
+            'power': self.power,
+            'min_lr': self.min_lr,
+            '_step': self._step,
+        }
+
+    def load_state_dict(self, state_dict):
+        for k, v in state_dict.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+        self._apply(self._compute_lr(self._step))

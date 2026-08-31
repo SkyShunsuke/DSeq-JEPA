@@ -57,9 +57,9 @@ framework:
   name: dseqjepa
   model:
     name: vit_base
-    emb_dim: 192
+    emb_dim: 768
     pred_depth: 6
-    pred_emb_dim: 192
+    pred_emb_dim: 768
     ema_start: 0.996
     ema_end: 1.0
     use_stop: False

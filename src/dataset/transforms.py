@@ -78,3 +78,21 @@ def make_inverse_normalize(normalization=((0.485, 0.456, 0.406),
         std=(1.0 / std).tolist()
     )
     return inv_normalize
+
+
+def make_lowlevel_transforms(
+    crop_size=224,
+    normalization=((0.485, 0.456, 0.406),
+                   (0.229, 0.224, 0.225))
+):
+    """VTAB-style preprocessing for the low-level reasoning tasks (Clevr/Count, Clevr/Dist).
+
+    VTAB simply resizes every image to `crop_size` x `crop_size`; no cropping or
+    flipping is applied, since both tasks depend on the full scene geometry.
+    """
+    transform = transforms.Compose([
+        transforms.Resize((crop_size, crop_size), interpolation=3),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=normalization[0], std=normalization[1]),
+    ])
+    return transform, transform

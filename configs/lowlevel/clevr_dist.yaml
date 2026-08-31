@@ -1,0 +1,60 @@
+# Clevr/Dist -- low-level reasoning transfer (VTAB-1k, 6-way classification).
+# Frozen target encoder + linear head on the final-layer [CLS] token.
+data:
+  root_path: ./data/            # parent folder of CLEVR_v1.0
+  image_folder: CLEVR_v1.0
+  dataset_name: clevr
+  task: distance                 # count | distance
+  train_split: train800         # VTAB-1k: 800 training images
+  val_split: val200             # VTAB-1k: 200 validation images
+  test_split: test              # VTAB-1k: 15,000 test images (CLEVR val set)
+  batch_size_per_replica: 32    # 32 x 8 GPUs = global batch size 256
+  num_workers: 8
+  pin_memory: True
+  augmentation:
+    crop_size: 224
+opt:
+  epochs: 100
+  name: adamw
+  clip_grad: 0.0
+  weight_decay: 0.05
+  lr:
+    auto_lr_scaling: False
+    base_lr: 0.001
+    base_lr_batch_size: 256
+    warmup_epochs: 0
+    final_lr: 0.0
+  use_bfloat16: False
+  bias_decay: False
+  norm_decay: False
+  global_seed: 0
+framework:
+  name: low_level
+model:
+  pretrained_weights: # YOUR PATH HERE
+  model_name: vit_base
+  patch_size: 16
+  use_masked_vit: True
+  use_class_token: True
+  feature_key: lastCLS          # final-layer [CLS] token, as in the paper
+  freeze_backbone: True
+  head_type: linear
+  use_bn: False
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/clevr_dist_dseqjepa_vitb16/
+  log_step_freq: 10
+  use_tensorboard: True
+  use_csv: True
+  log_stdout: True
+  ckpt:
+    save_latest: True
+    save_best: True
+  wandb:
+    use_wandb: True
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: clevr_dist_dseqjepa_vitb16
+  eval:
+    eval_epoch_freq: 5

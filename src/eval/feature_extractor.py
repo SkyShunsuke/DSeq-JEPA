@@ -14,6 +14,10 @@ from tqdm import tqdm
 FEATURE_STRATEGIES = [
     "lastPOOL",
     "concatPOOL4",
+    # -- only usable with an encoder that has a class token (natively pre-trained
+    #    with one, or given one post-hoc by src/post/train_cls_token.py)
+    "lastCLS",
+    "concatCLS4",
 ]
 
 logger = get_logger()

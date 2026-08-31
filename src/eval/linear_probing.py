@@ -9,7 +9,8 @@ from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 from torch.cuda import Event as CUDAEvent
 
-from src.models import init_target_encoder, init_probing_model
+from src.models import init_probing_model
+from src.eval.common import build_pretrained_encoder
 from src.utils.distributed import init_distributed_mode, get_rank, get_world_size
 from src.utils.distributed import is_main_process as is_main
 from src.utils.log import setup_logging, get_logger, AverageMeter
@@ -17,7 +18,7 @@ from src.dataset import make_probing_transforms, make_dataset
 from src.utils.opt.optimzer import get_probing_optimizer
 from src.utils.opt.scheduler import get_multi_step_values_lr_scheduler
 from src.utils.opt.scaler import get_gradient_scaler
-from src.utils.opt.optimzer import load_jepa_target_encoder_weights, load_probing_checkpoint, save_probing_checkpoint
+from src.utils.opt.optimzer import load_probing_checkpoint, save_probing_checkpoint
 
 def main(params, args):
     """Linear probing function for JEPA target encoder.
@@ -41,8 +42,8 @@ def main(params, args):
     logger.info(f"Using device: {device}, rank: {rank}, world_size: {world_size}")
     
     # -- make logging stuff
+    log_dir = params['logging']['log_dir']
     if is_main():
-        log_dir = params['logging']['log_dir']
         use_wandb = params['logging']['wandb'].get('use_wandb', False)
         use_tensorboard = params['logging'].get('use_tensorboard', False)
         use_csv = params['logging'].get('use_csv', False)
@@ -90,16 +91,7 @@ def main(params, args):
     patch_size = params['model']['patch_size']
     crop_size = params['data']['augmentation']['crop_size']
     img_size = params['data']['augmentation']['img_size']
-    model = init_target_encoder(device, patch_size, model_name, crop_size)
-    
-    # -- load pre-trained weights into target encoder
-    pretrained_weights = params['model']['pretrained_weights']
-    assert pretrained_weights is not None, "Please provide pre-trained weights for the target encoder."
-    model = load_jepa_target_encoder_weights(
-        model,
-        pretrained_weights,
-        device,
-    )
+    model = build_pretrained_encoder(params, device, img_size=crop_size)
     
     # -- build linear probing model
     model_with_head = init_probing_model(
@@ -110,7 +102,7 @@ def main(params, args):
         head_type=params['model']['head_type'],
         use_bn=params['model']['use_bn'],
         mlp_config=params['model'].get('mlp_config', None)
-    )
+    ).to(device)
     
     logger.info(f"Model Info: {model}")
     
@@ -119,6 +111,13 @@ def main(params, args):
         img_size,
         interpolation=params['data']['augmentation'].get('interpolation', 3),
     )
+
+    # -- dataset-specific keys (image folder name, iNat21 version, ...)
+    extra_data_kwargs = {
+        k: v for k, v in params['data'].items()
+        if k in ('image_folder', 'train_version', 'val_version', 'target_type',
+                 'copy_data', 'index_targets')
+    }
 
     _, train_loader, train_sampler = make_dataset(
         dataset_name=params['data']['dataset_name'],
@@ -131,6 +130,7 @@ def main(params, args):
         subset_file=params['data'].get('train_subset_file', None),
         root_path=params['data']['root_path'],
         data=params['data']['dataset_name'],
+        **extra_data_kwargs,
     )
     _, val_loader, _ = make_dataset(
         dataset_name=params['data']['dataset_name'],
@@ -146,6 +146,7 @@ def main(params, args):
         drop_last=False,
         subset_file=params['data'].get('test_subset_file', None),
         data=params['data']['dataset_name'],
+        **extra_data_kwargs,
     )
     ipe = len(train_loader)
     logger.info(f"Data Info: Dataset: {params['data']['dataset_name']}, #Images: {len(train_loader.dataset)}, IPE: {ipe}")

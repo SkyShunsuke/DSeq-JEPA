@@ -1,0 +1,67 @@
+data:
+  root_path: ./data/
+  image_folder: coco
+  dataset_name: coco
+  num_classes: 91
+  batch_size_per_replica: 2
+  eval_batch_size_per_replica: 1
+  num_workers: 8
+  pin_memory: true
+  img_size: 1008
+detection:
+  img_size: 1024
+  fpn_channels: 256
+opt:
+  epochs: 25
+  name: adamw
+  clip_grad: 0.0
+  weight_decay: 0.1
+  lr:
+    auto_lr_scaling: false
+    base_lr: 0.0001
+    base_lr_batch_size: 16
+    warmup_epochs: 1
+    start_lr: 0.0
+    final_lr: 0.0
+    backbone_lr_scale: 1.0
+  use_bfloat16: true
+  bias_decay: false
+  norm_decay: false
+  global_seed: 0
+framework:
+  name: detection
+model:
+  pretrained_weights: ./vit-h16-cls.pth.tar
+  model_name: vit_huge
+  patch_size: 14
+  crop_size: 224
+  use_masked_vit: true
+  use_class_token: true
+  out_layers:
+  - 7
+  - 15
+  - 23
+  - 31
+  drop_path_rate: 0.1
+  window_size: 14
+  use_checkpoint: true
+  freeze_backbone: false
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/coco_maskrcnn_vith14/
+  log_step_freq: 50
+  use_tensorboard: true
+  use_csv: true
+  log_stdout: true
+  ckpt:
+    save_latest: true
+    save_best: true
+  wandb:
+    use_wandb: true
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: coco_maskrcnn_vith14
+  eval:
+    eval_epoch_freq: 5
+    max_dets: 100

@@ -335,7 +335,7 @@ class FeatAvgPool(nn.Module):
     def forward(self, x):
         # bs, seq_len, dims = x.shape
         x = x.permute((0, 2, 1))
-        return self.avg_pool(x).squeeze()
+        return self.avg_pool(x).squeeze(-1)
 
 class VisionTransformer(nn.Module):
     """ Vision Transformer for Target/Context Encoder"""
@@ -506,31 +506,37 @@ class VisionTransformer(nn.Module):
         - stridePOOL_{cnt}_{str}  => pooled features sampled by stride from end
         """
         interms = []
+        cls_interms = []
         x = self.prepare_tokens(x, masks)
         for blk in self.blocks:
             x = blk(x)
-            interms.append(self.norm(x[:, 1:, :] if self.use_class_token else x))
+            x_norm = self.norm(x)
+            # -- keep the [CLS] token aside: `interms` stays patch-only so every
+            #    POOL / MAP key is unaffected, while the CLS keys below read the
+            #    real class token instead of the first patch token.
+            if self.use_class_token:
+                cls_interms.append(x_norm[:, 0])
+                x_norm = x_norm[:, 1:, :]
+            interms.append(x_norm)
 
         output = {}
         for name in names:
             if name.startswith("blkCLS"):
                 assert self.use_class_token, "Need class token to extract blkCLS"
                 v = int(name.replace("blkCLS", ""))
-                output[name] = interms[v][:, 0]
+                output[name] = cls_interms[v]
             elif name.startswith("concatCLS"):
                 assert self.use_class_token, "Need class token to extract concatCLS"
                 v = int(name.replace("concatCLS", ""))
-                feat = torch.cat([t[:, 0] for t in interms[-v:]], dim=-1)
+                feat = torch.cat(cls_interms[-v:], dim=-1)
                 output[name] = feat
             elif name == "lastCLS":
                 assert self.use_class_token, "Need class token to extract lastCLS"
-                output[name] = interms[-1][:, 0]
+                output[name] = cls_interms[-1]
             elif name == "lastMAP":
                 feat_map_size = self.patch_embed.feat_map_size
-                if self.use_class_token:
-                    feat_map = interms[-1][:, 1:]
-                else:
-                    feat_map = interms[-1]
+                # -- `interms` is already patch-only in both branches
+                feat_map = interms[-1]
                 B, L, C = feat_map.shape
                 feat_map = feat_map.reshape((B, *feat_map_size, C))
                 output[name] = feat_map
@@ -562,21 +568,35 @@ class VisionTransformer(nn.Module):
 
         return output
 
-    def interpolate_pos_encoding(self, x, pos_embed):
-        npatch = x.shape[1] - 1
-        N = pos_embed.shape[1] - 1
-        if npatch == N:
-            return pos_embed
-        class_emb = pos_embed[:, 0]
-        pos_embed = pos_embed[:, 1:]
-        dim = x.shape[-1]
-        pos_embed = nn.functional.interpolate(
-            pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
-            scale_factor=math.sqrt(npatch / N),
-            mode='bicubic',
-        )
-        pos_embed = pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return torch.cat((class_emb.unsqueeze(0), pos_embed), dim=1)
+    def interpolate_pos_encoding(self, x, pos_embed, hw=None):
+        """Match the sin-cos positional embedding to the tokens in `x`.
+
+        `pos_embed` holds one entry per patch of the pre-training grid and no
+        class-token entry (see `__init__`), so when the encoder carries a class
+        token a zero positional entry is prepended for it -- the same
+        convention as `MaskedVisionTransformer.prepare_tokens`.
+        `hw` optionally gives the (h, w) token grid for non-square inputs.
+        """
+        npatch = x.shape[1] - 1 if self.use_class_token else x.shape[1]
+        N = pos_embed.shape[1]
+        dim = pos_embed.shape[-1]
+        if hw is None:
+            grid = int(math.sqrt(npatch))
+            assert grid * grid == npatch, \
+                f'non-square token grid ({npatch} tokens); pass hw explicitly'
+            hw = (grid, grid)
+        if npatch != N or hw[0] * hw[1] != N:
+            pos_embed = nn.functional.interpolate(
+                pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2).float(),
+                size=hw,
+                mode='bicubic',
+                align_corners=False,
+            )
+            pos_embed = pos_embed.permute(0, 2, 3, 1).reshape(1, hw[0] * hw[1], dim).to(x.dtype)
+        if self.use_class_token:
+            class_emb = torch.zeros(1, 1, dim, dtype=pos_embed.dtype, device=pos_embed.device)
+            pos_embed = torch.cat((class_emb, pos_embed), dim=1)
+        return pos_embed
 
 
 def vit_predictor(**kwargs):

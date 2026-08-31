@@ -1,0 +1,58 @@
+data:
+  root_path: ./data/
+  image_folder: CLEVR_v1.0
+  dataset_name: clevr
+  task: count
+  train_split: train800
+  val_split: val200
+  test_split: test
+  batch_size_per_replica: 32
+  num_workers: 8
+  pin_memory: true
+  augmentation:
+    crop_size: 224
+opt:
+  epochs: 100
+  name: adamw
+  clip_grad: 0.0
+  weight_decay: 0.05
+  lr:
+    auto_lr_scaling: false
+    base_lr: 0.001
+    base_lr_batch_size: 256
+    warmup_epochs: 0
+    final_lr: 0.0
+  use_bfloat16: false
+  bias_decay: false
+  norm_decay: false
+  global_seed: 0
+framework:
+  name: low_level
+model:
+  pretrained_weights: ./vit-h16-cls.pth.tar
+  model_name: vit_huge
+  patch_size: 14
+  use_masked_vit: true
+  use_class_token: true
+  feature_key: lastCLS
+  freeze_backbone: true
+  head_type: linear
+  use_bn: false
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/clevr_count_vith14/
+  log_step_freq: 10
+  use_tensorboard: true
+  use_csv: true
+  log_stdout: true
+  ckpt:
+    save_latest: true
+    save_best: true
+  wandb:
+    use_wandb: true
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: clevr_count_vith14
+  eval:
+    eval_epoch_freq: 5

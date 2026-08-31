@@ -69,3 +69,63 @@ class LinearEvalModel(nn.Module):
         out_pool4 = self.concat_pool4(concat_feat)
         out_last = self.last_pool(last_feat)
         return out_pool4, out_last
+
+def feature_dim_of(feature_key: str, embed_dim: int) -> int:
+    """Width of the representation produced by `VisionTransformer.get_intermediate_features`."""
+    for prefix in ("concatCLS", "concatPOOL", "concatBLK"):
+        if feature_key.startswith(prefix):
+            return embed_dim * int(feature_key.replace(prefix, ""))
+    if feature_key.startswith("stridePOOL_"):
+        parts = [int(s) for s in feature_key.replace("stridePOOL_", "").split("_")]
+        return embed_dim * parts[0]
+    return embed_dim
+
+
+class FrozenFeatureClassifier(nn.Module):
+    """Frozen backbone + a single classification head on one chosen feature.
+
+    Used for the low-level reasoning transfer (Clevr/Count, Clevr/Dist), where
+    the paper freezes the target encoder and trains a task-specific linear
+    classifier on the final-layer [CLS] token (`feature_key='lastCLS'`).
+    """
+
+    def __init__(
+        self,
+        backbone,
+        embed_dim: int = 768,
+        num_classes: int = 8,
+        feature_key: str = "lastCLS",
+        freeze_backbone: bool = True,
+        head_type: str = "linear",
+        use_bn: bool = False,
+        mlp_config: dict = None,
+    ):
+        super().__init__()
+        self.backbone = backbone
+        self.feature_key = feature_key
+        self.head = PoolerHead(
+            in_dim=feature_dim_of(feature_key, embed_dim),
+            num_classes=num_classes,
+            head_type=head_type,
+            use_bn=use_bn,
+            mlp_config=mlp_config,
+        )
+        self.freeze_backbone = freeze_backbone
+        if freeze_backbone:
+            for p in self.backbone.parameters():
+                p.requires_grad = False
+            self.backbone.eval()
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        if self.freeze_backbone:
+            self.backbone.eval()
+        return self
+
+    def forward(self, x, **kwargs):
+        if self.freeze_backbone:
+            with torch.no_grad():
+                feats = self.backbone.get_intermediate_features(x, [self.feature_key])
+        else:
+            feats = self.backbone.get_intermediate_features(x, [self.feature_key])
+        return self.head(feats[self.feature_key])

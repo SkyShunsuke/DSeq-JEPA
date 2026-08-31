@@ -220,6 +220,7 @@ def load_jepa_target_encoder_weights(
     target_encoder: nn.Module,
     checkpoint_path: str,
     map_device: str = 'cpu',
+    strict: bool = True,
 ):  
     checkpoint = torch.load(checkpoint_path, map_location=map_device, weights_only=False)
     target_encoder_ckpt = checkpoint['target_encoder'] if 'target_encoder' in checkpoint else checkpoint['encoder']
@@ -227,7 +228,8 @@ def load_jepa_target_encoder_weights(
     if "module." in list(target_encoder_ckpt.keys())[0]:
         # Remove 'module.' prefix if present (from DDP training)
         target_encoder_ckpt = {k.replace("module.", ""): v for k, v in target_encoder_ckpt.items()}
-    target_encoder.load_state_dict(target_encoder_ckpt)
+    msg = target_encoder.load_state_dict(target_encoder_ckpt, strict=strict)
+    logger.info(f'loaded target encoder from {checkpoint_path} with msg: {msg}')
     return target_encoder
 
 def load_jepa_all_weights_for_analysis(
@@ -302,3 +304,91 @@ def load_probing_checkpoint(
     
     
     
+
+def get_finetune_optimizer(
+    model: nn.Module,
+    optimizer_name: str = 'adamw',
+    base_lr: float = 1e-4,
+    weight_decay: float = 0.05,
+    bias_decay: bool = False,
+    norm_decay: bool = False,
+    backbone_lr_scale: float = 1.0,
+    backbone_prefixes: tuple = ('backbone', 'body'),
+    world_size: int = 8,
+    batch_size_per_replica: int = 2,
+    base_lr_batch_size: int = 16,
+    auto_lr_scaling: bool = False,
+    **kwargs,
+):
+    """Create the optimizer used by the dense downstream tasks (COCO / ADE20K).
+
+    Parameters are split into (decay / no-decay) x (backbone / head) groups, so
+    the pre-trained encoder can be given a smaller learning rate through
+    `backbone_lr_scale` while everything is driven by a single schedule.
+    """
+    wd_filter = get_wd_filter(bias_decay, norm_decay)
+
+    groups = {
+        ('backbone', True): {"params": [], "weight_decay": weight_decay, "lr_scale": backbone_lr_scale},
+        ('backbone', False): {"params": [], "weight_decay": 0.0, "WD_exclude": True, "lr_scale": backbone_lr_scale},
+        ('head', True): {"params": [], "weight_decay": weight_decay, "lr_scale": 1.0},
+        ('head', False): {"params": [], "weight_decay": 0.0, "WD_exclude": True, "lr_scale": 1.0},
+    }
+    for n, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        where = 'backbone' if any(n.startswith(pre + '.') or f'.{pre}.' in n for pre in backbone_prefixes) else 'head'
+        groups[(where, wd_filter(n, p))]["params"].append(p)
+
+    param_groups = [g for g in groups.values() if len(g["params"]) > 0]
+    lr = _compute_scaled_lr(
+        base_lr, world_size, batch_size_per_replica, base_lr_batch_size, auto_lr_scaling)
+    for g in param_groups:
+        g["lr"] = lr * g["lr_scale"]
+    optimizer = get_optimizer(optimizer_name, param_groups, lr=lr, **kwargs)
+    logger.info(f'Built {optimizer_name} with {len(param_groups)} param groups, lr={lr:.2e}, '
+                f'backbone_lr_scale={backbone_lr_scale}')
+    return optimizer
+
+
+def save_downstream_checkpoint(
+    save_path: str,
+    step: int,
+    epoch: int,
+    model: nn.Module,
+    opt: torch.optim.Optimizer,
+    scaler=None,
+    lr_scheduler=None,
+    best_metric=None,
+):
+    """Checkpoint for the detection / segmentation / low-level transfer tasks."""
+    checkpoint = {
+        'step': step,
+        'epoch': epoch,
+        'model': model.state_dict(),
+        'opt': opt.state_dict(),
+        'scaler': scaler.state_dict() if scaler is not None else None,
+        'lr_scheduler': lr_scheduler.state_dict() if lr_scheduler is not None else None,
+        'best_metric': best_metric,
+    }
+    torch.save(checkpoint, save_path)
+    logger.info(f'Saved downstream checkpoint (epoch {epoch}, step {step}) to {save_path}')
+
+
+def load_downstream_checkpoint(
+    resume_path: str,
+    model: nn.Module,
+    opt: torch.optim.Optimizer = None,
+    scaler=None,
+    lr_scheduler=None,
+):
+    checkpoint = torch.load(resume_path, map_location=torch.device('cpu'), weights_only=False)
+    msg = model.load_state_dict(checkpoint['model'])
+    logger.info(f"loaded downstream model from epoch {checkpoint.get('epoch')} with msg: {msg}")
+    if opt is not None and checkpoint.get('opt') is not None:
+        opt.load_state_dict(checkpoint['opt'])
+    if scaler is not None and checkpoint.get('scaler') is not None:
+        scaler.load_state_dict(checkpoint['scaler'])
+    if lr_scheduler is not None and checkpoint.get('lr_scheduler') is not None:
+        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+    return model, opt, scaler, lr_scheduler, checkpoint.get('epoch', 0), checkpoint.get('step', 0)

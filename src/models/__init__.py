@@ -1,6 +1,6 @@
 from src.models.vision_transformer import VisionTransformer, VisionTransformerPredictor, init_weights
 from src.models.masked_vision_transformer import MaskedVisionTransformer, MaskedVisionTransformerPredictor
-from src.models.head import LinearEvalModel
+from src.models.head import LinearEvalModel, FrozenFeatureClassifier
 from src.models import vision_transformer as vit
 from src.models import masked_vision_transformer as masked_vit
 from src.models.projector import VICRegProjector
@@ -61,6 +61,8 @@ def init_target_encoder(
     model_name: str = 'vit_base',
     crop_size: int = 224,
     use_masked_vit: bool = False,
+    use_class_token: bool = False,
+    drop_path_rate: float = 0.0,
     **kwargs,
 ):
     vit_model = vit if not use_masked_vit else masked_vit
@@ -68,7 +70,8 @@ def init_target_encoder(
         img_size=[crop_size],
         patch_size=patch_size,
         use_projector=False,
-        drop_path_rate=0.0,
+        drop_path_rate=drop_path_rate,
+        use_class_token=use_class_token,
     ).to(device)
     for m in target_encoder.modules():
         init_weights(m)
@@ -117,3 +120,87 @@ def init_projector(
     else:
         raise ValueError(f"Unsupported projector_type: {projector_type}")
     return projector
+
+def init_low_level_model(
+    backbone: torch.nn.Module,
+    freeze_backbone: bool = True,
+    embed_dim: int = 768,
+    num_classes: int = 8,
+    feature_key: str = 'lastCLS',
+    head_type: str = 'linear',
+    use_bn: bool = False,
+    mlp_config: dict = None,
+    **kwargs,
+):
+    """Frozen encoder + task-specific linear head (Clevr/Count, Clevr/Dist)."""
+    return FrozenFeatureClassifier(
+        backbone=backbone,
+        embed_dim=embed_dim,
+        num_classes=num_classes,
+        feature_key=feature_key,
+        freeze_backbone=freeze_backbone,
+        head_type=head_type,
+        use_bn=use_bn,
+        mlp_config=mlp_config,
+    )
+
+def init_detection_model(
+    encoder: torch.nn.Module,
+    num_classes: int = 91,
+    out_layers=(3, 5, 7, 11),
+    fpn_channels: int = 256,
+    img_size: int = 1024,
+    window_size: int = 14,
+    use_checkpoint: bool = True,
+    freeze_backbone: bool = False,
+    **kwargs,
+):
+    """Mask R-CNN (FPN) on top of the pre-trained encoder -- MS-COCO."""
+    from src.models.detection import build_mask_rcnn
+    return build_mask_rcnn(
+        encoder,
+        num_classes=num_classes,
+        out_layers=tuple(out_layers),
+        fpn_channels=fpn_channels,
+        img_size=img_size,
+        window_size=window_size,
+        use_checkpoint=use_checkpoint,
+        freeze_backbone=freeze_backbone,
+        **kwargs,
+    )
+
+def init_segmentation_model(
+    encoder: torch.nn.Module,
+    num_classes: int = 150,
+    out_layers=(3, 5, 7, 11),
+    channels: int = 512,
+    pool_scales=(1, 2, 3, 6),
+    dropout: float = 0.1,
+    use_aux_head: bool = True,
+    aux_index: int = 2,
+    aux_channels: int = 256,
+    window_size: int = 0,
+    use_checkpoint: bool = False,
+    freeze_backbone: bool = False,
+    **kwargs,
+):
+    """UPerNet on top of the pre-trained encoder -- ADE20K."""
+    from src.models.vit_adapter import ViTDenseBackbone
+    from src.models.upernet import ViTUPerNet
+    backbone = ViTDenseBackbone(
+        encoder,
+        out_layers=tuple(out_layers),
+        window_size=window_size,
+        use_checkpoint=use_checkpoint,
+        freeze=freeze_backbone,
+    )
+    return ViTUPerNet(
+        backbone,
+        num_classes=num_classes,
+        channels=channels,
+        pool_scales=tuple(pool_scales),
+        dropout=dropout,
+        use_aux_head=use_aux_head,
+        aux_index=aux_index,
+        aux_channels=aux_channels,
+    )

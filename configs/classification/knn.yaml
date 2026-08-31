@@ -29,6 +29,8 @@ model:
   pretrained_weights: # YOUR PATH HERE
   model_name: vit_base
   patch_size: 16
+  use_masked_vit: True   # the pre-training encoder (see src/frameworks/*/pretrain.py)
+  use_class_token: True  # must match the pre-training config
   num_classes: 1000
 logging:
   log_dir: logs/knn_ijepa_vitb_in1k/

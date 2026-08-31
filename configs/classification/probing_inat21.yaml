@@ -1,6 +1,9 @@
 data:
   root_path: ./data/ # path to the parent folder of your dataset
-  dataset_name: imagenet1k  # Change to your dataset name if needed
+  dataset_name: inaturalist21
+  image_folder: inaturalist21
+  train_version: 2021_train_mini   # 2021_train for the full 2.7M-image training set
+  val_version: 2021_valid
   train_subset_file: null
   test_subset_file: null
   batch_size_per_replica: 32
@@ -37,13 +40,13 @@ model:
   patch_size: 16
   use_masked_vit: True   # the pre-training encoder (see src/frameworks/*/pretrain.py)
   use_class_token: True  # must match the pre-training config
-  num_classes: 1000
+  num_classes: 10000
   head_type: linear  # linear or mlp
   use_bn: True
 resume:
   resume_path: null
 logging:
-  log_dir: logs/probing_ijepa_vitb_in1k/
+  log_dir: logs/probing_dseqjepa_vitb_inat21/
   log_step_freq: 100
   use_tensorboard: True
   use_csv: True
@@ -56,7 +59,7 @@ logging:
     use_wandb: True
     project_name: FG-JEPA
     entity: shuns71
-    run_name: linear_ijepa_vitb16_in1k
+    run_name: linear_dseqjepa_vitb16_inat21
   eval:
     eval_epoch_freq: 1
 

@@ -32,7 +32,7 @@ def parse_args():
         type=str,
         default="pretrain",
         required=True,
-        choices=["pretrain", "classification", "detection", "segmentation", "visualization", "masking", "knn", "analysis"],
+        choices=["pretrain", "post", "classification", "detection", "segmentation", "visualization", "masking", "knn", "analysis"],
     )
     
     ### Loaded from torchrun
@@ -68,6 +68,14 @@ def main(params, args):
             cjepa_pretrain(params, args)
         else:
             raise NotImplementedError(f"Pretraining for framework {framework} is not implemented.")
+    elif task == "post":
+        # -- post-pretraining stages on a frozen encoder (src/post/)
+        framework = params['framework']['name']
+        if framework == "cls_token":
+            from src.post.train_cls_token import main as cls_token_main
+            cls_token_main(params, args)
+        else:
+            raise NotImplementedError(f"Post-pretraining stage {framework} is not implemented.")
     elif task == "classification":
         framework = params['framework']['name']
         if framework == "probing":
@@ -76,12 +84,20 @@ def main(params, args):
         elif framework == "knn":
             from src.eval.knn import main as knn_main
             knn_main(params, args)
+        elif framework == "low_level":
+            # -- Clevr/Count and Clevr/Dist (VTAB-1k low-level reasoning)
+            from src.eval.low_level import main as low_level_main
+            low_level_main(params, args)
         else:
             raise NotImplementedError(f"Classification for framework {framework} is not implemented.")
     elif task == "detection":
-        raise NotImplementedError("Detection task is not implemented yet.")
+        # -- MS-COCO detection / instance segmentation (Mask R-CNN)
+        from src.eval.detection import main as detection_main
+        detection_main(params, args)
     elif task == "segmentation":
-        raise NotImplementedError("Segmentation task is not implemented yet.")
+        # -- ADE20K semantic segmentation (UPerNet)
+        from src.eval.segmentation import main as segmentation_main
+        segmentation_main(params, args)
     elif task == "visualization":
         from src.vis.visualize import main as visualization_main
         visualization_main(params, args)

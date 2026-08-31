@@ -353,7 +353,7 @@ class FeatAvgPool(nn.Module):
     def forward(self, x):
         # bs, seq_len, dims = x.shape
         x = x.permute((0, 2, 1))
-        return self.avg_pool(x).squeeze()
+        return self.avg_pool(x).squeeze(-1)
 
 class MaskedVisionTransformer(nn.Module):
     """ Vision Transformer for Target/Context Encoder"""
@@ -534,31 +534,37 @@ class MaskedVisionTransformer(nn.Module):
         - stridePOOL_{cnt}_{str}  => pooled features sampled by stride from end
         """
         interms = []
+        cls_interms = []
         x = self.prepare_tokens(x, masks)
         for blk in self.blocks:
             x = blk(x)
-            interms.append(self.norm(x[:, 1:, :] if self.use_class_token else x))
+            x_norm = self.norm(x)
+            # -- keep the [CLS] token aside: `interms` stays patch-only so every
+            #    POOL / MAP key is unaffected, while the CLS keys below read the
+            #    real class token instead of the first patch token.
+            if self.use_class_token:
+                cls_interms.append(x_norm[:, 0])
+                x_norm = x_norm[:, 1:, :]
+            interms.append(x_norm)
 
         output = {}
         for name in names:
             if name.startswith("blkCLS"):
                 assert self.use_class_token, "Need class token to extract blkCLS"
                 v = int(name.replace("blkCLS", ""))
-                output[name] = interms[v][:, 0]
+                output[name] = cls_interms[v]
             elif name.startswith("concatCLS"):
                 assert self.use_class_token, "Need class token to extract concatCLS"
                 v = int(name.replace("concatCLS", ""))
-                feat = torch.cat([t[:, 0] for t in interms[-v:]], dim=-1)
+                feat = torch.cat(cls_interms[-v:], dim=-1)
                 output[name] = feat
             elif name == "lastCLS":
                 assert self.use_class_token, "Need class token to extract lastCLS"
-                output[name] = interms[-1][:, 0]
+                output[name] = cls_interms[-1]
             elif name == "lastMAP":
                 feat_map_size = self.patch_embed.feat_map_size
-                if self.use_class_token:
-                    feat_map = interms[-1][:, 1:]
-                else:
-                    feat_map = interms[-1]
+                # -- `interms` is already patch-only in both branches
+                feat_map = interms[-1]
                 B, L, C = feat_map.shape
                 feat_map = feat_map.reshape((B, *feat_map_size, C))
                 output[name] = feat_map

@@ -63,7 +63,7 @@ class CSVLogger:
             # Replace old file with new one
             self.csv_file.close()
             shutil.move(tmp_file.name, self.log_file)
-            self.csv_file = open(self.log_file, mode='a', newline='')
+            self.csv_file = open(self.log_file, mode='a+', newline='')
             self.writer = csv.DictWriter(self.csv_file, fieldnames=self.fieldnames)
         else:
             # Normal case: writer already initialized

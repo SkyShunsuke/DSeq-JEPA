@@ -1,0 +1,64 @@
+# MS-COCO 2017 detection / instance segmentation.
+# Mask R-CNN + FPN on the pre-trained ViT-B/16 encoder, fine-tuned end-to-end.
+data:
+  root_path: ./data/            # parent folder of coco/
+  image_folder: coco
+  dataset_name: coco
+  num_classes: 91               # 80 things + background (original COCO id range)
+  batch_size_per_replica: 2     # 2 x 8 GPUs = global batch size 16
+  eval_batch_size_per_replica: 1
+  num_workers: 8
+  pin_memory: True
+detection:
+  img_size: 1024                # longest side; images are padded to a multiple of 32
+  fpn_channels: 256
+opt:
+  epochs: 25
+  name: adamw
+  clip_grad: 0.0
+  weight_decay: 0.1
+  lr:
+    auto_lr_scaling: False
+    base_lr: 1.0e-04
+    base_lr_batch_size: 16
+    warmup_epochs: 1            # linear warmup during the first epoch, then cosine
+    start_lr: 0.0
+    final_lr: 0.0
+    backbone_lr_scale: 1.0
+  use_bfloat16: True
+  bias_decay: False
+  norm_decay: False
+  global_seed: 0
+framework:
+  name: detection
+model:
+  pretrained_weights: # YOUR PATH HERE
+  model_name: vit_base
+  patch_size: 16
+  crop_size: 224                # pre-training resolution (positional grid)
+  use_masked_vit: True
+  use_class_token: True
+  out_layers: [3, 5, 7, 11]     # 0-indexed blocks feeding the feature pyramid
+  drop_path_rate: 0.1           # stochastic depth, max rate 0.1
+  window_size: 14               # windowed attention outside `out_layers` (ViTDet-style)
+  use_checkpoint: True          # gradient checkpointing over the ViT blocks
+  freeze_backbone: False
+resume:
+  resume_path: null
+logging:
+  log_dir: logs/coco_maskrcnn_dseqjepa_vitb16/
+  log_step_freq: 50
+  use_tensorboard: True
+  use_csv: True
+  log_stdout: True
+  ckpt:
+    save_latest: True
+    save_best: True
+  wandb:
+    use_wandb: True
+    project_name: FG-JEPA
+    entity: shuns71
+    run_name: coco_maskrcnn_dseqjepa_vitb16
+  eval:
+    eval_epoch_freq: 5
+    max_dets: 100

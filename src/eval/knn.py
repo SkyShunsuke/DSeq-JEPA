@@ -4,12 +4,11 @@ import torch
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
 
-from src.models import init_target_encoder
+from src.eval.common import build_pretrained_encoder
 from src.utils.distributed import init_distributed_mode, get_rank, get_world_size
 from src.utils.distributed import is_main_process as is_main
 from src.utils.log import setup_logging, get_logger
 from src.dataset import make_probing_transforms, make_dataset
-from src.utils.opt.optimzer import load_jepa_target_encoder_weights
 from src.eval.feature_extractor import KNNEvaluatorDistributed, build_feature_bank_ddp
 
 def main(params, args):
@@ -47,16 +46,7 @@ def main(params, args):
     patch_size = params['model']['patch_size']
     crop_size = params['data']['augmentation']['crop_size']
     img_size = params['data']['augmentation']['img_size']
-    model = init_target_encoder(device, patch_size, model_name, crop_size)
-    
-    # -- load pre-trained weights into target encoder
-    pretrained_weights = params['model']['pretrained_weights']
-    assert pretrained_weights is not None, "Please provide pre-trained weights for the target encoder."
-    model = load_jepa_target_encoder_weights(
-        model,
-        pretrained_weights,
-        device,
-    )
+    model = build_pretrained_encoder(params, device, img_size=crop_size)
     logger.info(f"Model Info: {model}")
     
     train_transform, test_transform = make_probing_transforms(
